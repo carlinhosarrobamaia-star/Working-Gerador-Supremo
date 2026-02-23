@@ -1,0 +1,1557 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="UTF-8">
+<title>Gerador Supremo</title>
+<link href="https://fonts.googleapis.com/css2?family=Cinzel+Decorative:wght@700&family=Outfit:wght@300;400;600;700&display=swap" rel="stylesheet">
+<style>
+:root{
+  --bg1:#0a0a0a; --bg2:#111; --bg3:#1a1a1a; --bg4:#222;
+  --border:#333; --border2:#2a2a2a;
+  --glass:rgba(255,255,255,0.04); --glass2:rgba(255,255,255,0.07);
+
+  /* Raridades */
+  --col-omega:#000000;
+  --col-mitica:#cc0000;
+  --col-lendaria:#e8a020;
+  --col-epica:#9b45d0;
+  --col-rara:#2266dd;
+  --col-incomum:#22aa55;
+  --col-comum:#666666;
+}
+
+*{box-sizing:border-box;margin:0;padding:0;}
+body{
+  font-family:'Outfit',sans-serif;
+  background:var(--bg1);
+  color:#d4d4d4;
+  padding:30px 25px;
+  min-height:100vh;
+}
+
+h1{
+  font-family:'Cinzel Decorative',serif;
+  font-size:1.7rem; color:#fff;
+  margin-bottom:25px; letter-spacing:3px;
+  text-shadow:0 0 30px rgba(255,255,255,0.12);
+}
+h3{color:#aaa;font-size:.85rem;text-transform:uppercase;letter-spacing:2px;margin-bottom:10px;}
+h4{color:#666;font-size:.78rem;text-transform:uppercase;letter-spacing:1.5px;margin-bottom:8px;}
+
+textarea{
+  width:100%;height:120px;background:var(--bg3);
+  border:1px solid var(--border);border-radius:10px;
+  padding:12px;color:#ccc;font-family:'Outfit',sans-serif;font-size:.88rem;resize:vertical;
+}
+textarea:focus{outline:none;border-color:#555;}
+textarea::placeholder{color:#3a3a3a;font-size:.8rem;line-height:1.6;}
+
+button{
+  margin:4px;padding:7px 14px;border:none;border-radius:8px;cursor:pointer;
+  background:var(--bg4);color:#ccc;font-weight:600;font-family:'Outfit',sans-serif;
+  font-size:.82rem;border:1px solid var(--border);
+  transition:background .15s,color .15s,transform .1s;
+}
+button:hover{background:#2e2e2e;color:#fff;transform:translateY(-1px);}
+
+.category{background:var(--glass);padding:15px;margin-bottom:15px;border-radius:14px;border:1px solid var(--border2);}
+.subcategory{background:var(--glass2);padding:10px;margin-top:10px;border-radius:10px;border:1px solid var(--border2);}
+
+.characters{display:flex;flex-wrap:wrap;gap:15px;margin-top:20px;}
+.character{background:var(--glass);padding:15px;border-radius:14px;min-width:240px;border:1px solid var(--border2);}
+.pinned{border:1px solid #888!important;}
+.charHeader{font-weight:bold;margin-bottom:10px;display:flex;align-items:center;gap:4px;flex-wrap:wrap;color:#eee;}
+.charHeader span{cursor:pointer;margin-left:2px;font-size:.95rem;}
+
+/* SKILL ITEMS */
+p.skill-item{
+  padding:6px 10px 6px 10px;margin-bottom:5px;border-radius:8px;
+  font-weight:600;font-size:.84rem;cursor:pointer;
+  border:1px solid transparent;position:relative;color:#fff;
+  transition:filter .15s,transform .1s;
+}
+p.skill-item:hover{filter:brightness(1.2);transform:scale(1.01);}
+p.skill-item::after{content:"◎";position:absolute;right:8px;top:50%;transform:translateY(-50%);font-size:.7rem;opacity:.4;}
+
+/* TREMOR apenas para skill-item, não para roleta */
+@keyframes tremorMitica{
+  0%{transform:translate(0,0) rotate(0deg);}
+  25%{transform:translate(-1px,.5px) rotate(-.3deg);}
+  50%{transform:translate(1px,-.5px) rotate(.3deg);}
+  75%{transform:translate(-.5px,1px) rotate(-.15deg);}
+  100%{transform:translate(0,0) rotate(0deg);}
+}
+@keyframes tremorOmega{
+  0%{transform:translate(0,0) rotate(0deg);}
+  25%{transform:translate(-1.5px,1px) rotate(-.4deg);}
+  50%{transform:translate(1.5px,-1px) rotate(.4deg);}
+  75%{transform:translate(-1px,-.5px) rotate(-.2deg);}
+  100%{transform:translate(0,0) rotate(0deg);}
+}
+
+/* NEONS */
+@keyframes neonMitica{
+  0%,100%{box-shadow:0 0 4px #ff0000, 0 0 12px #ff0000, 0 0 24px #cc0000;}
+  50%{box-shadow:0 0 8px #ff3333, 0 0 20px #ff0000, 0 0 40px #cc0000;}
+}
+@keyframes neonOmega{
+  0%,100%{box-shadow:0 0 5px #ffffff88, 0 0 15px #ffffff55, 0 0 30px #ffffff33;}
+  50%{box-shadow:0 0 10px #ffffffaa, 0 0 25px #ffffff77, 0 0 50px #ffffff44;}
+}
+
+li{padding:4px 8px;margin-bottom:4px;border-radius:6px;font-weight:600;font-size:.84rem;list-style:none;border:1px solid transparent;}
+
+hr{border:none;border-top:1px solid #1e1e1e;margin:20px 0;}
+
+/* ===================== MODAL ROLETA ===================== */
+#rouletteOverlay{
+  display:none;position:fixed;inset:0;background:rgba(0,0,0,.9);
+  z-index:999;align-items:center;justify-content:center;backdrop-filter:blur(10px);
+}
+#rouletteOverlay.visible{display:flex;}
+
+#rouletteModal{
+  background:#0f0f0f;border:1px solid #2a2a2a;border-radius:22px;
+  padding:28px 24px 22px;min-width:340px;max-width:420px;width:90vw;
+  display:flex;flex-direction:column;align-items:center;gap:14px;
+  box-shadow:0 0 80px rgba(0,0,0,.8);position:relative;overflow:hidden;
+}
+#rouletteModal h2{font-family:'Cinzel Decorative',serif;color:#e0e0e0;font-size:1rem;text-align:center;letter-spacing:2px;}
+#rouletteCanvasWrap{position:relative;width:300px;height:300px;cursor:pointer;flex-shrink:0;}
+#rouletteCanvas{border-radius:50%;display:block;box-shadow:0 0 0 3px #2a2a2a,0 0 40px rgba(0,0,0,.6);}
+
+#spinHint{
+  position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);
+  width:52px;height:52px;border-radius:50%;background:#1a1a1a;border:2px solid #444;
+  display:flex;align-items:center;justify-content:center;font-size:1.3rem;color:#ccc;
+  pointer-events:none;opacity:.7;transition:opacity .2s;user-select:none;
+}
+#roulettePointer{
+  position:absolute;top:-16px;left:50%;transform:translateX(-50%);
+  width:0;height:0;border-left:10px solid transparent;border-right:10px solid transparent;
+  border-top:22px solid #e0e0e0;filter:drop-shadow(0 2px 4px #000);z-index:10;
+}
+
+/* Flash overlay no modal */
+#rouletteFlash{
+  position:absolute;inset:0;border-radius:22px;
+  pointer-events:none;opacity:0;z-index:50;
+  transition:opacity .08s;
+}
+
+/* Resultado grande no centro */
+#rouletteBigResult{
+  position:absolute;inset:0;display:flex;align-items:center;justify-content:center;
+  z-index:60;pointer-events:none;opacity:0;
+  flex-direction:column;gap:8px;
+}
+#rouletteBigResultText{
+  font-family:'Cinzel Decorative',serif;
+  font-size:1.8rem;font-weight:700;text-align:center;
+  text-shadow:0 0 30px currentColor;
+  padding:0 20px;line-height:1.2;
+}
+#rouletteBigResultSub{
+  font-size:1rem;font-weight:600;opacity:.8;
+}
+
+#rouletteResult{
+  font-size:1rem;font-weight:700;text-align:center;min-height:26px;
+  color:#fff;padding:6px 16px;border-radius:8px;
+  transition:background .4s;letter-spacing:.5px;border:1px solid transparent;
+  opacity:0;transition:opacity .5s;
+}
+#rouletteResult.shown{opacity:1;}
+
+#rouletteCloseBtn{background:transparent;border:1px solid #2a2a2a;color:#666;font-size:.8rem;margin-top:2px;}
+#rouletteCloseBtn:hover{border-color:#555;color:#aaa;}
+
+/* PARTICLES CANVAS */
+#particlesCanvas{
+  position:fixed;inset:0;pointer-events:none;z-index:998;display:none;
+}
+#particlesCanvas.active{display:block;}
+
+/* OMEGA RITUAL overlay */
+#omegaRitual{
+  position:fixed;inset:0;z-index:1100;pointer-events:none;display:none;
+  align-items:center;justify-content:center;
+}
+#omegaRitual.active{display:flex;}
+#omegaRitualBg{position:absolute;inset:0;background:radial-gradient(ellipse at center,#000000 0%,transparent 70%);}
+#omegaRitualText{
+  font-family:'Cinzel Decorative',serif;
+  font-size:3rem;color:#fff;letter-spacing:8px;text-align:center;
+  position:relative;z-index:2;
+  text-shadow:0 0 20px #fff, 0 0 60px #fff, 0 0 100px #fff;
+  opacity:0;
+}
+
+/* MITICA FIRE overlay */
+#miticaOverlay{
+  position:fixed;inset:0;z-index:1100;pointer-events:none;display:none;
+  align-items:center;justify-content:center;
+}
+#miticaOverlay.active{display:flex;}
+#miticaCanvas{position:absolute;inset:0;width:100%;height:100%;}
+#miticaText{
+  font-family:'Cinzel Decorative',serif;
+  font-size:2.8rem;color:#ff4400;letter-spacing:6px;text-align:center;
+  position:relative;z-index:2;
+  text-shadow:0 0 15px #ff0000, 0 0 40px #ff0000, 0 0 80px #ff4400;
+  opacity:0;
+}
+
+/* LUCK PANEL */
+#luckPanel select,#luckPanel input[type=number]{
+  background:#1a1a1a;border:1px solid #333;border-radius:8px;
+  padding:6px 10px;color:#ccc;font-family:'Outfit',sans-serif;font-size:.82rem;
+}
+#luckActiveTag{
+  display:inline-block;padding:3px 10px;border-radius:20px;
+  font-size:.75rem;font-weight:700;letter-spacing:1px;
+  background:rgba(155,69,208,.2);border:1px solid #9b45d0;color:#cc88ff;
+  opacity:0;transition:opacity .3s;
+}
+#luckActiveTag.on{opacity:1;}
+</style>
+</head>
+<body>
+
+<h1>🎲 Gerador Supremo</h1>
+
+<h3>Importar Categoria</h3>
+<textarea id="importBox" placeholder="Exemplo de formato:&#10;&#10;Habilidades&#10;Ataque&#10;Espada Lendária 2&#10;Punho de Ferro 8&#10;Tapa Fraco 70&#10;Defesa&#10;Escudo Divino 1&#10;Armadura de Couro 40&#10;&#10;— 1ª linha: nome da categoria&#10;— Linhas sem número: nome da subcategoria&#10;— Linhas com número no final: opção + peso (maior peso = mais comum)"></textarea><br>
+<button onclick="importCategory()">Adicionar Categoria</button>
+
+<hr>
+<div id="categories"></div>
+<br>
+
+Quantidade:
+<input type="number" id="amount" value="1" min="1" style="background:#1a1a1a;border:1px solid #333;border-radius:8px;padding:6px 10px;color:#ccc;font-family:Outfit,sans-serif;width:70px;">
+<button onclick="generateAll()">Gerar Todos</button>
+<button onclick="generateOne()">Gerar Um</button>
+
+<div class="characters" id="characters"></div>
+
+<!-- LUCK MANIPULATOR -->
+<div id="luckPanel" style="background:rgba(255,255,255,0.04);border:1px solid #2a2a2a;border-radius:14px;padding:15px;margin-top:20px;">
+  <h3 style="margin-bottom:12px;">🍀 Manipulador de Sorte</h3>
+  <div style="display:flex;align-items:center;gap:12px;flex-wrap:wrap;margin-bottom:10px;">
+    <label style="color:#888;font-size:.82rem;text-transform:uppercase;letter-spacing:1px;">Raridade alvo</label>
+    <select id="luckTargetRarity" style="background:#1a1a1a;border:1px solid #333;border-radius:8px;padding:6px 10px;color:#ccc;font-family:Outfit,sans-serif;font-size:.82rem;">
+      <option value="">Nenhuma (Normal)</option>
+      <option value="omega">Omega (&lt;=1%)</option>
+      <option value="mitica">Mítica (1.01–5%)</option>
+      <option value="lendaria">Lendária (5–10%)</option>
+      <option value="epica">Épica (10–20%)</option>
+      <option value="rara">Rara (20–40%)</option>
+      <option value="incomum">Incomum (40–70%)</option>
+      <option value="comum">Comum (&gt;70%)</option>
+    </select>
+    <label style="color:#888;font-size:.82rem;text-transform:uppercase;letter-spacing:1px;">Multiplicador</label>
+    <input type="range" id="luckMultiplier" min="1" max="100" value="1" step="1"
+      style="width:120px;accent-color:#9b45d0;">
+    <span id="luckMultiplierVal" style="color:#ccc;font-weight:700;min-width:40px;">1x</span>
+  </div>
+  <p style="color:#555;font-size:.78rem;font-weight:400;">Com multiplicador ativo, o peso das opções da raridade alvo é multiplicado antes do sorteio — aumentando sua chance sem garantir o resultado.</p>
+  <div style="margin-top:8px;"><span id="luckActiveTag">✦ SORTE ATIVA</span></div>
+</div>
+
+<!-- MODAL ROLETA -->
+<div id="rouletteOverlay">
+  <div id="rouletteModal">
+    <div id="rouletteFlash"></div>
+    <div id="rouletteBigResult">
+      <div id="rouletteBigResultText"></div>
+      <div id="rouletteBigResultSub"></div>
+    </div>
+    <h2 id="rouletteTitle">Roleta</h2>
+    <div id="rouletteCanvasWrap" onclick="handleCanvasClick()">
+      <div id="roulettePointer"></div>
+      <canvas id="rouletteCanvas" width="300" height="300"></canvas>
+      <div id="spinHint">▶</div>
+    </div>
+    <div id="rouletteResult"></div>
+    <button id="rouletteCloseBtn" onclick="closeRoulette()">Fechar</button>
+  </div>
+</div>
+
+<!-- FORCE PICK MENU -->
+<div id="forcePickOverlay" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.75);z-index:1200;align-items:center;justify-content:center;backdrop-filter:blur(6px);">
+  <div style="background:#111;border:1px solid #333;border-radius:16px;padding:20px;max-width:340px;width:90vw;max-height:80vh;overflow-y:auto;">
+    <h3 style="color:#888;margin-bottom:12px;font-size:.85rem;letter-spacing:2px;">👁 FORÇAR RESULTADO</h3>
+    <div id="forcePickList" style="display:flex;flex-direction:column;gap:6px;"></div>
+    <button onclick="closeForcePickMenu()" style="margin-top:14px;width:100%;background:transparent;border:1px solid #2a2a2a;color:#666;">Cancelar</button>
+  </div>
+</div>
+
+<!-- PARTICLES -->
+<canvas id="particlesCanvas"></canvas>
+
+<!-- OMEGA RITUAL -->
+<div id="omegaRitual">
+  <div id="omegaRitualBg"></div>
+  <canvas id="omegaBeamCanvas" style="position:absolute;inset:0;width:100%;height:100%;pointer-events:none;"></canvas>
+  <div id="omegaRitualText">Ω OMEGA Ω</div>
+</div>
+
+<!-- MITICA FIRE -->
+<div id="miticaOverlay">
+  <canvas id="miticaCanvas"></canvas>
+  <div id="miticaText">✦ MÍTICA ✦</div>
+</div>
+
+<script>
+/* ============================================================
+   RARIDADES
+   omega   < 1%   → preto, borda branca, neon branco
+   mitica  1-5%   → vermelho, neon vermelho
+   lendaria 5-10% → dourado
+   epica  10-20%  → roxo
+   rara   20-40%  → azul
+   incomum 40-70% → verde
+   comum  >=70%   → cinza
+============================================================ */
+
+function getRarity(percent){
+  if(percent<=1)   return'omega';
+  if(percent<=5)   return'mitica';
+  if(percent<=10)  return'lendaria';
+  if(percent<=20)  return'epica';
+  if(percent<=40)  return'rara';
+  if(percent<=70)  return'incomum';
+  return'comum';
+}
+
+const RARITY_STYLES={
+  omega:{
+    bg:'linear-gradient(135deg,#000000 0%,#111111 50%,#000000 100%)',
+    border:'#ffffff',
+    textColor:'#ffffff',
+    shadow:'',
+    canvasFill:'#0a0a0a',
+    label:'OMEGA',
+    glowColor:'rgba(255,255,255,0.6)',
+  },
+  mitica:{
+    bg:'linear-gradient(135deg,#1a0000 0%,#3d0000 40%,#1a0000 100%)',
+    border:'#ff2200',
+    textColor:'#ff8888',
+    shadow:'',
+    canvasFill:'#2a0000',
+    label:'MÍTICA',
+    glowColor:'rgba(255,0,0,0.6)',
+  },
+  lendaria:{
+    bg:'linear-gradient(135deg,#1a1000 0%,#3d2800 40%,#1a1000 100%)',
+    border:'#e8a020',
+    textColor:'#ffd080',
+    shadow:'none',
+    canvasFill:'#3d2800',
+    label:'LENDÁRIA',
+    glowColor:null,
+  },
+  epica:{
+    bg:'linear-gradient(135deg,#0d0020 0%,#2a0060 40%,#0d0020 100%)',
+    border:'#9b45d0',
+    textColor:'#cc88ff',
+    shadow:'none',
+    canvasFill:'#2a0060',
+    label:'ÉPICA',
+    glowColor:null,
+  },
+  rara:{
+    bg:'linear-gradient(135deg,#00081a 0%,#001a50 40%,#00081a 100%)',
+    border:'#2266dd',
+    textColor:'#88aaff',
+    shadow:'none',
+    canvasFill:'#001a50',
+    label:'RARA',
+    glowColor:null,
+  },
+  incomum:{
+    bg:'linear-gradient(135deg,#001a08 0%,#003a18 40%,#001a08 100%)',
+    border:'#22aa55',
+    textColor:'#66ff99',
+    shadow:'none',
+    canvasFill:'#003a18',
+    label:'INCOMUM',
+    glowColor:null,
+  },
+  comum:{
+    bg:'linear-gradient(135deg,#151515 0%,#222222 40%,#151515 100%)',
+    border:'#555555',
+    textColor:'#aaaaaa',
+    shadow:'none',
+    canvasFill:'#1e1e1e',
+    label:'COMUM',
+    glowColor:null,
+  },
+};
+
+function applyRarityToEl(el,percent){
+  const r=getRarity(percent);
+  const s=RARITY_STYLES[r];
+  el.style.background=s.bg;
+  el.style.border='1px solid '+s.border;
+  el.style.color=s.textColor;
+  el.style.boxShadow='none';
+  el.style.animation='none';
+  el.classList.remove('rarity-omega','rarity-mitica');
+  if(r==='omega'){
+    el.classList.add('rarity-omega');
+    el.style.animation='tremorOmega .55s infinite, neonOmega 1.5s ease-in-out infinite';
+  }else if(r==='mitica'){
+    el.classList.add('rarity-mitica');
+    el.style.animation='tremorMitica .5s infinite, neonMitica 1.2s ease-in-out infinite';
+  }
+}
+
+/* ============================================================
+   UTIL
+============================================================ */
+let categories=[];
+let charCount=1;
+
+function sortOptions(o){o.sort((a,b)=>b.weight-a.weight);}
+function normalize(options){
+  let total=options.reduce((s,o)=>s+o.weight,0);
+  return options.map(o=>({name:o.name,percent:(o.weight/total)*100}));
+}
+
+
+/* ============================================================
+   LUCK MANIPULATOR
+============================================================ */
+document.getElementById('luckMultiplier').addEventListener('input',function(){
+  document.getElementById('luckMultiplierVal').innerText=this.value+'x';
+  updateLuckTag();
+});
+document.getElementById('luckTargetRarity').addEventListener('change',updateLuckTag);
+
+function updateLuckTag(){
+  const{targetRarity,multiplier}=getLuckSettings();
+  const tag=document.getElementById('luckActiveTag');
+  if(targetRarity&&multiplier>1){
+    const s=RARITY_STYLES[targetRarity];
+    tag.style.background='rgba(0,0,0,.3)';
+    tag.style.border='1px solid '+s.border;
+    tag.style.color=s.textColor;
+    tag.innerText='✦ SORTE: '+s.label+' ×'+multiplier;
+    tag.classList.add('on');
+  }else{
+    tag.classList.remove('on');
+  }
+}
+
+function getLuckSettings(){
+  return{
+    targetRarity:document.getElementById('luckTargetRarity').value,
+    multiplier:parseFloat(document.getElementById('luckMultiplier').value)||1,
+  };
+}
+
+// Apply luck boost to a normalized options array (adjusts weights before rolling)
+function applyLuck(normalized){
+  const{targetRarity,multiplier}=getLuckSettings();
+  if(!targetRarity||multiplier===1)return normalized;
+  // Re-weight: boost matching rarity items
+  const boosted=normalized.map(o=>{
+    const r=getRarity(o.percent);
+    return{...o,luckWeight:(r===targetRarity?o.percent*multiplier:o.percent)};
+  });
+  const totalLuck=boosted.reduce((s,o)=>s+o.luckWeight,0);
+  return boosted.map(o=>({...o,percent:(o.luckWeight/totalLuck)*100}));
+}
+
+function rollFromNormalized(n){
+  const ln=applyLuck(n);
+  let r=Math.random()*100;
+  for(let i=0;i<ln.length;i++){if(r<ln[i].percent)return n[i];r-=ln[i].percent;}
+  return n[n.length-1];
+}
+
+function roll(options){
+  const n=normalize(options);
+  return rollFromNormalized(n);
+}
+/* ============================================================
+   ROULETTE
+============================================================ */
+let currentRouletteOptions=null;
+let currentRouletteCallback=null;
+let rouletteSpinning=false;
+let rouletteAngle=0;
+let forcedResultIndex=null;
+
+function drawRoulette(normalized,highlightIndex){
+  const canvas=document.getElementById('rouletteCanvas');
+  const ctx=canvas.getContext('2d');
+  const W=canvas.width,H=canvas.height,cx=W/2,cy=H/2,r=W/2-3;
+  ctx.clearRect(0,0,W,H);
+  let startAngle=rouletteAngle;
+  for(let i=0;i<normalized.length;i++){
+    const slice=(normalized[i].percent/100)*Math.PI*2;
+    const rarity=getRarity(normalized[i].percent);
+    const s=RARITY_STYLES[rarity];
+    ctx.beginPath();ctx.moveTo(cx,cy);
+    ctx.arc(cx,cy,r,startAngle,startAngle+slice);ctx.closePath();
+    if(highlightIndex===i){
+      ctx.fillStyle='#ffffff';
+    }else{
+      ctx.fillStyle=s.canvasFill;
+    }
+    ctx.fill();
+    // Borda da fatia
+    ctx.strokeStyle=highlightIndex===i?'#fff':s.border;
+    ctx.lineWidth=highlightIndex===i?2:1;
+    ctx.stroke();
+
+    // Label
+    const fontSize=Math.min(11,Math.max(7,260/normalized.length*0.38));
+    ctx.save();
+    ctx.translate(cx,cy);ctx.rotate(startAngle+slice/2);
+    ctx.textAlign='right';
+    ctx.fillStyle=highlightIndex===i?'#000':s.textColor;
+    ctx.font='bold '+fontSize+'px Outfit,sans-serif';
+    let label=normalized[i].name;
+    if(label.length>13)label=label.substring(0,11)+'..';
+    ctx.fillText(label,r-5,fontSize*.4);
+    ctx.restore();
+    startAngle+=slice;
+  }
+  // Borda externa
+  ctx.beginPath();ctx.arc(cx,cy,r,0,Math.PI*2);
+  ctx.strokeStyle='#2a2a2a';ctx.lineWidth=3;ctx.stroke();
+  // Centro
+  ctx.beginPath();ctx.arc(cx,cy,28,0,Math.PI*2);
+  ctx.fillStyle='#0f0f0f';ctx.fill();
+  ctx.strokeStyle='#333';ctx.lineWidth=2;ctx.stroke();
+}
+
+function openRoulette(subName,options,callback){
+  currentRouletteOptions=normalize(options);
+  currentRouletteCallback=callback;
+  rouletteSpinning=false;
+  rouletteAngle=-Math.PI/2;
+  forcedResultIndex=null;
+
+  document.getElementById('rouletteTitle').innerText=subName;
+  const res=document.getElementById('rouletteResult');
+  res.innerText='';res.style.background='transparent';
+  res.style.border='1px solid transparent';res.style.color='#fff';
+  res.classList.remove('shown');
+
+  const big=document.getElementById('rouletteBigResult');
+  big.style.transition='none';
+  big.style.opacity='0';
+  big.style.display='flex'; // ALWAYS reset to flex
+
+  const flash=document.getElementById('rouletteFlash');
+  flash.style.transition='none';
+  flash.style.opacity='0';flash.style.background='transparent';
+
+  const hint=document.getElementById('spinHint');
+  hint.innerText='▶';hint.style.opacity='.7';
+
+  document.getElementById('rouletteOverlay').classList.add('visible');
+  drawRoulette(currentRouletteOptions,-1);
+}
+
+function closeRoulette(){
+  document.getElementById('rouletteOverlay').classList.remove('visible');
+  stopParticles();
+}
+
+function handleCanvasClick(){if(!rouletteSpinning)spinRoulette();}
+
+function spinRoulette(){
+  if(rouletteSpinning)return;
+  rouletteSpinning=true;
+  document.getElementById('spinHint').innerText='';
+  document.getElementById('rouletteResult').classList.remove('shown');
+
+  const normalized=currentRouletteOptions;
+  let result, resultIndex;
+  if(forcedResultIndex!==null && forcedResultIndex<normalized.length){
+    resultIndex=forcedResultIndex;
+    result=normalized[resultIndex];
+    forcedResultIndex=null;
+  }else{
+    result=rollFromNormalized(normalized);
+    resultIndex=normalized.indexOf(result);
+  }
+
+  let totalAngle=0;
+  for(let i=0;i<resultIndex;i++) totalAngle+=(normalized[i].percent/100)*Math.PI*2;
+  const sliceSize=(normalized[resultIndex].percent/100)*Math.PI*2;
+  const randomOffset=(Math.random()*.8+.1)*sliceSize;
+  const landAngle=totalAngle+randomOffset;
+  const targetAngle=-Math.PI/2-landAngle;
+  // ALWAYS spin at least 8 full rotations so it feels satisfying
+  const minSpins=8, extraSpins=minSpins+Math.floor(Math.random()*3);
+  const finalAngle=targetAngle+extraSpins*Math.PI*2;
+
+  const startAngle=rouletteAngle;
+  const spinDuration=4500;
+  let spinStart=null;
+  // Ease: instant fast launch, long smooth deceleration
+  function easeInOutSpin(t){
+    // Exponential launch + cubic brake
+    if(t<0.08) return t*1.5; // instant kick: 8% time covers 12% distance
+    const t2=(t-0.08)/0.92;
+    return 0.12+(0.88)*(1-Math.pow(1-t2,3.5));
+  }
+
+  function spinFrame(ts){
+    if(!spinStart)spinStart=ts;
+    const t=Math.min((ts-spinStart)/spinDuration,1);
+    rouletteAngle=startAngle+(finalAngle-startAngle)*easeInOutSpin(t);
+    drawRoulette(normalized,-1);
+    if(t<1){requestAnimationFrame(spinFrame);}
+    else{
+      rouletteAngle=finalAngle;
+      drawRoulette(normalized,resultIndex);
+      rouletteSpinning=false;
+      onRouletteResult(result);
+    }
+  }
+
+  requestAnimationFrame(spinFrame);
+}
+
+function onRouletteResult(result){
+  const rarity=getRarity(result.percent);
+  const s=RARITY_STYLES[rarity];
+  const hint=document.getElementById('spinHint');
+  hint.innerText='▶';hint.style.opacity='.4';
+
+  // FLASH
+  flashModal(s.border,rarity);
+
+  // Big center text
+  setTimeout(()=>showBigResult(result,rarity,s),120);
+}
+
+function flashModal(color,rarity){
+  const flash=document.getElementById('rouletteFlash');
+  const intensity=rarity==='omega'?'.7':rarity==='mitica'?'.5':'.3';
+  flash.style.background=color;
+  flash.style.opacity=intensity;
+  setTimeout(()=>{flash.style.opacity='0';},200);
+}
+
+function showBigResult(result,rarity,s){
+  const big=document.getElementById('rouletteBigResult');
+  const txt=document.getElementById('rouletteBigResultText');
+  const sub=document.getElementById('rouletteBigResultSub');
+
+  txt.innerText=result.name;
+  txt.style.color=s.textColor;
+  sub.innerText=s.label+' · '+result.percent.toFixed(2)+'%';
+  sub.style.color=s.border;
+
+  // Ensure visible
+  big.style.display='flex';
+  big.style.transition='none';
+  big.style.opacity='0';
+  // Force reflow then fade in
+  void big.offsetHeight;
+  big.style.transition='opacity .35s';
+  big.style.opacity='1';
+
+  // Animações especiais
+  if(rarity==='omega')triggerOmegaAnim(result.name);
+  else if(rarity==='mitica')triggerMiticaAnim(result.name);
+  else startParticles(s.border);
+
+  // Hold 2.5s then fade out
+  setTimeout(()=>{
+    big.style.transition='opacity .7s';
+    big.style.opacity='0';
+    setTimeout(()=>{
+      big.style.display='none';
+      showBottomResult(result,rarity,s);
+      if(currentRouletteCallback)currentRouletteCallback(result);
+    },700);
+  },2500);
+}
+
+function showBottomResult(result,rarity,s){
+  const res=document.getElementById('rouletteResult');
+  res.innerText=result.name+' ('+result.percent.toFixed(2)+'%) — '+s.label;
+  res.style.background=s.bg;
+  res.style.border='1px solid '+s.border;
+  res.style.color=s.textColor;
+  res.classList.add('shown');
+}
+
+/* ============================================================
+   PARTICLES
+============================================================ */
+let particlesActive=false;
+let particlesList=[];
+let particlesRAF=null;
+
+function startParticles(color){
+  const canvas=document.getElementById('particlesCanvas');
+  canvas.width=window.innerWidth;
+  canvas.height=window.innerHeight;
+  canvas.classList.add('active');
+  particlesActive=true;
+  particlesList=[];
+  for(let i=0;i<12;i++)spawnParticle(canvas,color,true);
+  particlesRAF=requestAnimationFrame(()=>updateParticles(color));
+  setTimeout(()=>stopParticles(),3000);
+}
+
+function spawnParticle(canvas,color,fromBottom){
+  if(particlesList.length>60)return; // cap for perf
+  const x=Math.random()*canvas.width;
+  const y=fromBottom?canvas.height+10:Math.random()*canvas.height;
+  particlesList.push({
+    x,y,vx:(Math.random()-.5)*2,vy:-(Math.random()*3+1),
+    r:Math.random()*4+2,alpha:1,color,
+    life:Math.random()*.5+.5
+  });
+}
+
+function updateParticles(color){
+  if(!particlesActive)return;
+  const canvas=document.getElementById('particlesCanvas');
+  const ctx=canvas.getContext('2d');
+  ctx.clearRect(0,0,canvas.width,canvas.height);
+  ctx.save();
+  for(let i=particlesList.length-1;i>=0;i--){
+    const p=particlesList[i];
+    p.x+=p.vx;p.y+=p.vy;p.vy-=.04;
+    p.alpha-=0.01/p.life;
+    if(p.alpha<=0){particlesList.splice(i,1);continue;}
+    ctx.globalAlpha=p.alpha;
+    ctx.shadowBlur=8;ctx.shadowColor=p.color;
+    ctx.fillStyle=p.color;
+    ctx.beginPath();ctx.arc(p.x,p.y,p.r,0,Math.PI*2);ctx.fill();
+    if(Math.random()<.02)spawnParticle(canvas,color,false);
+  }
+  ctx.restore();
+  particlesRAF=requestAnimationFrame(()=>updateParticles(color));
+}
+
+function stopParticles(){
+  particlesActive=false;
+  if(particlesRAF)cancelAnimationFrame(particlesRAF);
+  const canvas=document.getElementById('particlesCanvas');
+  canvas.classList.remove('active');
+  const ctx=canvas.getContext('2d');
+  ctx.clearRect(0,0,canvas.width,canvas.height);
+}
+
+/* ============================================================
+   FORCE PICK (SECRET)
+============================================================ */
+function openForcePickMenu(){
+  const list=document.getElementById('forcePickList');
+  list.innerHTML='';
+  if(!currentRouletteOptions)return;
+  currentRouletteOptions.forEach((opt,i)=>{
+    const btn=document.createElement('button');
+    btn.style.cssText='width:100%;text-align:left;padding:7px 10px;border-radius:8px;font-size:.82rem;font-weight:600;';
+    btn.innerText=opt.name+' ('+opt.percent.toFixed(2)+'%)';
+    const s=RARITY_STYLES[getRarity(opt.percent)];
+    btn.style.background=s.bg;
+    btn.style.border='1px solid '+s.border;
+    btn.style.color=s.textColor;
+    btn.onclick=()=>{
+      forcedResultIndex=i;
+      closeForcePickMenu();
+    };
+    list.appendChild(btn);
+  });
+  document.getElementById('forcePickOverlay').style.display='flex';
+}
+function closeForcePickMenu(){
+  document.getElementById('forcePickOverlay').style.display='none';
+}
+
+/* ============================================================
+   OMEGA ANIMATION — ULTRA
+   Optimized: single offscreen canvas, batched draw calls,
+   capped particle counts, reused ctx state.
+============================================================ */
+let omegaRAF=null;
+let omegaBeams=[];
+let omegaExplosions=[];
+let omegaLightnings=[];
+let omegaActive=false;
+let omegaTime=0; // frame counter
+
+function triggerOmegaAnim(name){
+  const overlay=document.getElementById('omegaRitual');
+  const text=document.getElementById('omegaRitualText');
+  const beamCanvas=document.getElementById('omegaBeamCanvas');
+  text.innerText='Ω  '+name.toUpperCase()+'  Ω';
+  text.style.opacity='0';
+  text.style.transform='scale(2.2)';
+  overlay.style.opacity='1';
+  overlay.classList.add('active');
+
+  beamCanvas.width=window.innerWidth;
+  beamCanvas.height=window.innerHeight;
+  omegaActive=true;
+  omegaBeams=[];omegaExplosions=[];omegaLightnings=[];
+  omegaTime=0;
+
+  // t=0: violent screen shatter + start continuous shake
+  omegaShatter();
+  const omegaContinuousShake=omegaContinuousShakeStart();
+
+  // t=100ms: sustained radial BEAMS (full-length, not travelling — flicker like lightning pillars)
+  setTimeout(()=>spawnBeams(beamCanvas),100);
+
+  // t=300ms: first mega explosion dead center
+  setTimeout(()=>spawnExplosions(beamCanvas,1,true),300);
+
+  // t=500ms: lightning bolts crackle across screen
+  setTimeout(()=>spawnLightnings(beamCanvas,6),500);
+
+  // t=700ms: text SLAMS in with chromatic blur
+  setTimeout(()=>{
+    let t0=null;
+    function punchIn(ts){
+      if(!t0)t0=ts;
+      const p=Math.min((ts-t0)/400,1);
+      const ease=1-Math.pow(1-p,4);
+      text.style.opacity=Math.min(ease*2,1);
+      text.style.transform='scale('+(2.2-(1.2*ease))+')';
+      text.style.textShadow=`0 0 ${30*(1-ease)}px #fff, 0 0 ${60*(1-ease)}px #fff, 0 0 ${100*(1-ease)+20}px #fff`;
+      if(p<1)requestAnimationFrame(punchIn);
+      else{text.style.transform='scale(1)';text.style.textShadow='';}
+    }
+    requestAnimationFrame(punchIn);
+  },700);
+
+  // t=900ms: second wave explosions scattered
+  setTimeout(()=>spawnExplosions(beamCanvas,5,false),900);
+
+  // t=1300ms: more lightning
+  setTimeout(()=>spawnLightnings(beamCanvas,8),1300);
+
+  // t=1500ms: third mega explosion at center
+  setTimeout(()=>spawnExplosions(beamCanvas,1,true),1500);
+
+  // t=1800ms: final scattered explosions
+  setTimeout(()=>spawnExplosions(beamCanvas,4,false),1800);
+
+  // particles
+  startParticles('#ffffff');
+
+  // t=3600ms: fade out everything
+  setTimeout(()=>{
+    omegaActive=false;
+    omegaContinuousShake.stop();
+    let t1=null;
+    function fadeOut(ts){
+      if(!t1)t1=ts;
+      const p=Math.min((ts-t1)/700,1);
+      const e=1-Math.pow(1-p,2);
+      text.style.opacity=1-e;
+      overlay.style.opacity=1-e;
+      if(p<1)requestAnimationFrame(fadeOut);
+      else{
+        cancelAnimationFrame(omegaRAF);
+        overlay.classList.remove('active');
+        overlay.style.opacity='';text.style.opacity='';text.style.transform='';
+        stopParticles();
+        beamCanvas.getContext('2d').clearRect(0,0,beamCanvas.width,beamCanvas.height);
+      }
+    }
+    requestAnimationFrame(fadeOut);
+  },3600);
+
+  omegaRAF=requestAnimationFrame(()=>runOmegaFrame(beamCanvas));
+}
+
+function spawnBeams(canvas){
+  const cx=canvas.width/2, cy=canvas.height/2;
+  // 16 sustained beams from all directions — they linger and flicker
+  for(let i=0;i<16;i++){
+    const angle=(i/16)*Math.PI*2;
+    const dist=Math.max(canvas.width,canvas.height)*1.1;
+    omegaBeams.push({
+      ox:cx+Math.cos(angle)*dist, oy:cy+Math.sin(angle)*dist,
+      tx:cx+Math.cos(angle+Math.PI)*dist*0.05,
+      ty:cy+Math.sin(angle+Math.PI)*dist*0.05,
+      width:2+Math.random()*10,
+      alpha:0.8+Math.random()*0.2,
+      life:1.0,
+      decay:0.004+Math.random()*0.003,
+      flicker:Math.random()*Math.PI*2,
+      color: i%3===0?'#aaffff':i%3===1?'#ffffff':'#ccccff',
+    });
+  }
+  // 4 mega beams — very wide
+  for(let i=0;i<4;i++){
+    const angle=(i/4)*Math.PI*2+(Math.PI/8);
+    const dist=Math.max(canvas.width,canvas.height)*1.1;
+    omegaBeams.push({
+      ox:cx+Math.cos(angle)*dist, oy:cy+Math.sin(angle)*dist,
+      tx:cx+Math.cos(angle+Math.PI)*dist*0.08,
+      ty:cy+Math.sin(angle+Math.PI)*dist*0.08,
+      width:12+Math.random()*18,
+      alpha:0.5,
+      life:1.0,
+      decay:0.003,
+      flicker:Math.random()*Math.PI*2,
+      color:'#ffffff',
+    });
+  }
+}
+
+function spawnExplosions(canvas,count,centered){
+  const cx=canvas.width/2, cy=canvas.height/2;
+  for(let i=0;i<count;i++){
+    const ox=centered?cx:cx+(Math.random()-.5)*canvas.width*0.7;
+    const oy=centered?cy:cy+(Math.random()-.5)*canvas.height*0.7;
+    const ex={x:ox,y:oy,rings:[],particles:[]};
+    // Multiple rings per explosion
+    const ringCount=centered?4:2;
+    for(let r=0;r<ringCount;r++){
+      ex.rings.push({r:r*15,maxR:180+Math.random()*120,alpha:1,speed:5+r*2,lw:centered?4:2});
+    }
+    // Particles — capped at 24 per explosion for perf
+    const pCount=centered?24:14;
+    for(let j=0;j<pCount;j++){
+      const a=Math.random()*Math.PI*2;
+      const spd=(centered?6:3)+Math.random()*10;
+      ex.particles.push({
+        x:ox,y:oy,
+        vx:Math.cos(a)*spd,vy:Math.sin(a)*spd,
+        r:(centered?3:2)+Math.random()*4,alpha:1,
+        color:Math.random()<.6?'#ffffff':Math.random()<.5?'#aaffff':'#ffeecc',
+        decay:0.016+Math.random()*0.01,
+      });
+    }
+    omegaExplosions.push(ex);
+  }
+}
+
+function spawnLightnings(canvas,count){
+  const cx=canvas.width/2, cy=canvas.height/2;
+  for(let i=0;i<count;i++){
+    // A lightning bolt is a jagged polyline from edge to near-center
+    const angle=Math.random()*Math.PI*2;
+    const dist=Math.max(canvas.width,canvas.height)*0.8;
+    const sx=cx+Math.cos(angle)*dist, sy=cy+Math.sin(angle)*dist;
+    const ex2=cx+(Math.random()-.5)*200, ey=cy+(Math.random()-.5)*200;
+    const pts=[{x:sx,y:sy}];
+    const steps=6+Math.floor(Math.random()*6);
+    for(let s=1;s<steps;s++){
+      const t=s/steps;
+      const mx=sx+(ex2-sx)*t+(Math.random()-.5)*120;
+      const my=sy+(ey-sy)*t+(Math.random()-.5)*120;
+      pts.push({x:mx,y:my});
+    }
+    pts.push({x:ex2,y:ey});
+    omegaLightnings.push({pts,alpha:1,decay:0.06+Math.random()*0.04,width:1+Math.random()*2});
+  }
+}
+
+function runOmegaFrame(canvas){
+  if(!omegaActive){return;}
+  omegaTime++;
+  const ctx=canvas.getContext('2d');
+  ctx.clearRect(0,0,canvas.width,canvas.height);
+
+  // ── Beams (sustained, flickering) ──
+  ctx.save();
+  for(let i=omegaBeams.length-1;i>=0;i--){
+    const b=omegaBeams[i];
+    b.life-=b.decay;
+    b.flicker+=0.18;
+    if(b.life<=0){omegaBeams.splice(i,1);continue;}
+    const flick=0.5+0.5*Math.sin(b.flicker);
+    const a=b.alpha*b.life*flick;
+    ctx.globalAlpha=a;
+    ctx.shadowBlur=25;ctx.shadowColor=b.color;
+    ctx.strokeStyle=b.color;ctx.lineWidth=b.width*(0.6+flick*0.4);
+    ctx.beginPath();ctx.moveTo(b.ox,b.oy);ctx.lineTo(b.tx,b.ty);ctx.stroke();
+    // core bright line
+    ctx.globalAlpha=a*0.6;
+    ctx.strokeStyle='#ffffff';ctx.lineWidth=b.width*0.25;
+    ctx.beginPath();ctx.moveTo(b.ox,b.oy);ctx.lineTo(b.tx,b.ty);ctx.stroke();
+  }
+  ctx.restore();
+
+  // ── Lightning ──
+  ctx.save();
+  for(let i=omegaLightnings.length-1;i>=0;i--){
+    const bolt=omegaLightnings[i];
+    bolt.alpha-=bolt.decay;
+    if(bolt.alpha<=0){omegaLightnings.splice(i,1);continue;}
+    ctx.globalAlpha=bolt.alpha;
+    ctx.shadowBlur=18;ctx.shadowColor='#aaffff';
+    ctx.strokeStyle='#ffffff';ctx.lineWidth=bolt.width;
+    ctx.beginPath();ctx.moveTo(bolt.pts[0].x,bolt.pts[0].y);
+    for(let p=1;p<bolt.pts.length;p++)ctx.lineTo(bolt.pts[p].x,bolt.pts[p].y);
+    ctx.stroke();
+  }
+  ctx.restore();
+
+  // ── Explosions ──
+  ctx.save();
+  for(let i=omegaExplosions.length-1;i>=0;i--){
+    const ex=omegaExplosions[i];
+    // Rings
+    for(let j=ex.rings.length-1;j>=0;j--){
+      const ring=ex.rings[j];
+      ring.r+=ring.speed;ring.alpha-=0.022;
+      if(ring.alpha<=0){ex.rings.splice(j,1);continue;}
+      ctx.globalAlpha=ring.alpha;
+      ctx.shadowBlur=20;ctx.shadowColor='#ffffff';
+      ctx.strokeStyle='#ffffff';ctx.lineWidth=ring.lw*ring.alpha;
+      ctx.beginPath();ctx.arc(ex.x,ex.y,ring.r,0,Math.PI*2);ctx.stroke();
+    }
+    // Particles — batch same-color draws
+    for(let j=ex.particles.length-1;j>=0;j--){
+      const p=ex.particles[j];
+      p.x+=p.vx;p.y+=p.vy;p.vy+=.12;
+      p.alpha-=p.decay;p.r*=.975;
+      if(p.alpha<=0){ex.particles.splice(j,1);continue;}
+      ctx.globalAlpha=p.alpha;
+      ctx.shadowBlur=10;ctx.shadowColor=p.color;
+      ctx.fillStyle=p.color;
+      ctx.beginPath();ctx.arc(p.x,p.y,p.r,0,Math.PI*2);ctx.fill();
+    }
+    if(!ex.rings.length&&!ex.particles.length)omegaExplosions.splice(i,1);
+  }
+  ctx.restore();
+
+  omegaRAF=requestAnimationFrame(()=>runOmegaFrame(canvas));
+}
+
+function omegaShatter(){
+  omegaShake(8);
+  // Rapid full-screen flashes using a fixed overlay div
+  const flash=document.getElementById('rouletteFlash');
+  let fc=0;
+  const fi=setInterval(()=>{
+    fc++;
+    flash.style.transition='none';
+    flash.style.background=fc%2===0?'#ffffff':'#000000';
+    flash.style.opacity=fc%2===0?'.5':'.7';
+    if(fc>12){clearInterval(fi);flash.style.opacity='0';}
+  },55);
+}
+
+function omegaShake(intensity){
+  const body=document.body;
+  let t=0;
+  const total=18;
+  const iv=setInterval(()=>{
+    t++;
+    const mag=intensity*(1-t/total);
+    body.style.transform=`translate(${(Math.random()-.5)*mag*2}px,${(Math.random()-.5)*mag*2}px)`;
+    if(t>=total){clearInterval(iv);body.style.transform='';}
+  },30);
+}
+
+function omegaContinuousShakeStart(){
+  const body=document.body;
+  let running=true;
+  let frame=0;
+  function tick(){
+    if(!running){body.style.transform='';return;}
+    frame++;
+    // Intensity pulses: strong at start, settles to low rumble, spikes on explosions
+    const base=frame<20?5:(frame<60?2.5:1.2);
+    const mag=base*(0.5+0.5*Math.random());
+    body.style.transform=`translate(${(Math.random()-.5)*mag*2}px,${(Math.random()-.5)*mag*2}px)`;
+    setTimeout(tick, 35);
+  }
+  tick();
+  return {stop(){running=false;}};
+}
+
+/* ============================================================
+   MITICA ANIMATION - Fire effect UPGRADED
+============================================================ */
+let miticaFireRAF=null;
+
+function triggerMiticaAnim(name){
+  const overlay=document.getElementById('miticaOverlay');
+  const text=document.getElementById('miticaText');
+  const canvas=document.getElementById('miticaCanvas');
+  text.innerText='✦  '+name.toUpperCase()+'  ✦';
+  text.style.opacity='0';
+  text.style.transform='scale(1.8)';
+  overlay.style.opacity='1';
+  overlay.classList.add('active');
+
+  canvas.width=window.innerWidth;
+  canvas.height=window.innerHeight;
+
+  // Phase 1: screen flash red
+  miticaFlash();
+
+  // Phase 2: fire starts
+  startFire(canvas);
+  startParticles('#ff3300');
+
+  // Phase 3: screen shake
+  setTimeout(()=>miticaShake(),100);
+
+  // Phase 4: fire columns burst up from bottom
+  setTimeout(()=>miticaColumns(canvas),300);
+
+  // Phase 5: sparks radiate from center
+  setTimeout(()=>miticaSparks(canvas),500);
+
+  // Phase 6: text punches in
+  setTimeout(()=>{
+    let t0=null;
+    function fadeIn(ts){
+      if(!t0)t0=ts;
+      const p=Math.min((ts-t0)/500,1);
+      const eased=1-Math.pow(1-p,3);
+      text.style.opacity=eased;
+      text.style.transform='scale('+(1.8-(0.8*eased))+')';
+      if(p<1)requestAnimationFrame(fadeIn);
+      else text.style.transform='scale(1)';
+    }
+    requestAnimationFrame(fadeIn);
+  },400);
+
+  // Phase 7: second wave of sparks
+  setTimeout(()=>miticaSparks(canvas),1100);
+
+  // Phase 8: fade out
+  setTimeout(()=>{
+    stopFire();
+    let t1=null;
+    function fadeOut(ts){
+      if(!t1)t1=ts;
+      const p=Math.min((ts-t1)/800,1);
+      text.style.opacity=1-p;
+      overlay.style.opacity=1-p;
+      if(p<1)requestAnimationFrame(fadeOut);
+      else{
+        overlay.classList.remove('active');
+        overlay.style.opacity='';
+        text.style.opacity='';
+        text.style.transform='';
+        stopParticles();
+      }
+    }
+    requestAnimationFrame(fadeOut);
+  },2800);
+}
+
+function miticaFlash(){
+  const body=document.body;
+  body.style.transition='background .05s';
+  body.style.background='#3a0000';
+  setTimeout(()=>{body.style.background='';body.style.transition='';},150);
+}
+
+function miticaShake(){
+  const body=document.body;
+  let t=0;
+  const iv=setInterval(()=>{
+    t++;
+    const mag=t<8?5:2;
+    body.style.transform=`translate(${(Math.random()-.5)*mag}px,${(Math.random()-.5)*mag}px)`;
+    if(t>14){clearInterval(iv);body.style.transform='';}
+  },40);
+}
+
+// Fire columns shooting up from bottom edge
+function miticaColumns(canvas){
+  const ctx=canvas.getContext('2d');
+  const cols=8;
+  for(let c=0;c<cols;c++){
+    const x=(c/(cols-1))*canvas.width;
+    let colParticles=[];
+    let age=0;
+    const maxAge=60;
+    function colFrame(){
+      age++;
+      for(let i=0;i<6;i++){
+        colParticles.push({
+          x:x+(Math.random()-.5)*40,
+          y:canvas.height,
+          vx:(Math.random()-.5)*2,
+          vy:-(Math.random()*15+8),
+          r:Math.random()*18+6,
+          alpha:.9,
+          hue:Math.random()*25,
+        });
+      }
+      for(let i=colParticles.length-1;i>=0;i--){
+        const p=colParticles[i];
+        p.x+=p.vx+(Math.random()-.5)*.5;
+        p.y+=p.vy;
+        p.vy*=.96;
+        p.r*=.97;
+        p.alpha-=.018;
+        if(p.alpha<=0||p.r<1){colParticles.splice(i,1);continue;}
+        const grd=ctx.createRadialGradient(p.x,p.y,0,p.x,p.y,p.r);
+        grd.addColorStop(0,`hsla(${p.hue},100%,75%,${p.alpha})`);
+        grd.addColorStop(.5,`hsla(${p.hue},100%,50%,${p.alpha*.6})`);
+        grd.addColorStop(1,`hsla(${p.hue},100%,30%,0)`);
+        ctx.beginPath();ctx.arc(p.x,p.y,p.r,0,Math.PI*2);
+        ctx.fillStyle=grd;ctx.fill();
+      }
+      if(age<maxAge)requestAnimationFrame(colFrame);
+    }
+    setTimeout(()=>requestAnimationFrame(colFrame), c*80+Math.random()*100);
+  }
+}
+
+// Embers/sparks radiating from center
+function miticaSparks(canvas){
+  const ctx=canvas.getContext('2d');
+  const cx=canvas.width/2, cy=canvas.height/2;
+  const sparks=[];
+  for(let i=0;i<50;i++){
+    const a=Math.random()*Math.PI*2;
+    const spd=4+Math.random()*14;
+    sparks.push({
+      x:cx,y:cy,
+      vx:Math.cos(a)*spd, vy:Math.sin(a)*spd,
+      r:1+Math.random()*3,
+      alpha:1,
+      hue:Math.random()*30,
+      trail:[],
+    });
+  }
+  function sparkFrame(){
+    let alive=false;
+    for(let i=sparks.length-1;i>=0;i--){
+      const s=sparks[i];
+      s.trail.push({x:s.x,y:s.y});
+      if(s.trail.length>8)s.trail.shift();
+      s.x+=s.vx; s.y+=s.vy;
+      s.vy+=.2;
+      s.alpha-=.022;
+      s.r*=.98;
+      if(s.alpha<=0){sparks.splice(i,1);continue;}
+      alive=true;
+      // Trail
+      for(let j=0;j<s.trail.length;j++){
+        const ta=s.alpha*(j/s.trail.length)*.5;
+        ctx.globalAlpha=ta;
+        ctx.fillStyle=`hsl(${s.hue},100%,70%)`;
+        ctx.beginPath();ctx.arc(s.trail[j].x,s.trail[j].y,s.r*(j/s.trail.length),0,Math.PI*2);ctx.fill();
+      }
+      ctx.globalAlpha=s.alpha;
+      ctx.shadowBlur=8;ctx.shadowColor=`hsl(${s.hue},100%,60%)`;
+      ctx.fillStyle=`hsl(${s.hue},100%,85%)`;
+      ctx.beginPath();ctx.arc(s.x,s.y,s.r,0,Math.PI*2);ctx.fill();
+      ctx.globalAlpha=1;ctx.shadowBlur=0;
+    }
+    if(alive)requestAnimationFrame(sparkFrame);
+  }
+  requestAnimationFrame(sparkFrame);
+}
+
+// Particle fire
+let fireParticles=[];
+let fireActive=false;
+
+function startFire(canvas){
+  fireActive=true;
+  fireParticles=[];
+  function frame(){
+    if(!fireActive)return;
+    const ctx=canvas.getContext('2d');
+    ctx.clearRect(0,0,canvas.width,canvas.height);
+
+    // Spawn
+    for(let i=0;i<3;i++){
+      fireParticles.push({
+        x:Math.random()*canvas.width,
+        y:canvas.height+10,
+        vx:(Math.random()-.5)*3,
+        vy:-(Math.random()*6+4),
+        r:Math.random()*20+8,
+        alpha:Math.random()*.7+.3,
+        hue:Math.random()*30, // 0-30 = red to orange
+      });
+    }
+
+    for(let i=fireParticles.length-1;i>=0;i--){
+      const p=fireParticles[i];
+      p.x+=p.vx+(Math.random()-.5);
+      p.y+=p.vy;
+      p.r*=.97;
+      p.alpha-=.015;
+      p.hue+=.5;
+      if(p.alpha<=0||p.r<1){fireParticles.splice(i,1);continue;}
+
+      // Glow
+      const grd=ctx.createRadialGradient(p.x,p.y,0,p.x,p.y,p.r);
+      grd.addColorStop(0,`hsla(${p.hue},100%,70%,${p.alpha})`);
+      grd.addColorStop(.5,`hsla(${p.hue},100%,50%,${p.alpha*.7})`);
+      grd.addColorStop(1,`hsla(${p.hue},100%,30%,0)`);
+      ctx.beginPath();ctx.arc(p.x,p.y,p.r,0,Math.PI*2);
+      ctx.fillStyle=grd;ctx.fill();
+    }
+    miticaFireRAF=requestAnimationFrame(frame);
+  }
+  miticaFireRAF=requestAnimationFrame(frame);
+}
+
+function stopFire(){
+  fireActive=false;
+  if(miticaFireRAF)cancelAnimationFrame(miticaFireRAF);
+  const canvas=document.getElementById('miticaCanvas');
+  const ctx=canvas.getContext('2d');
+  ctx.clearRect(0,0,canvas.width,canvas.height);
+}
+
+/* ============================================================
+   IMPORT
+============================================================ */
+function importCategory(){
+  const text=document.getElementById('importBox').value.trim();
+  if(!text)return;
+  const lines=text.split('\n');
+  const name=lines[0].trim();
+  const newCat={name,subcategories:[],collapsed:false};
+  let currentSub=null;
+  for(let i=1;i<lines.length;i++){
+    const line=lines[i].trim();
+    if(!line)continue;
+    const parts=line.split(' ');
+    if(parts.length===1){
+      currentSub={name:line,options:[],collapsed:false};
+      newCat.subcategories.push(currentSub);
+    }else{
+      const weight=parseFloat(parts.pop());
+      const optionName=parts.join(' ');
+      if(currentSub&&!isNaN(weight)){
+        currentSub.options.push({name:optionName,weight});
+        sortOptions(currentSub.options);
+      }
+    }
+  }
+  categories.push(newCat);
+  document.getElementById('importBox').value='';
+  renderCategories();
+}
+
+/* ============================================================
+   CATEGORIES RENDER
+============================================================ */
+function toggleCategory(i){categories[i].collapsed=!categories[i].collapsed;renderCategories();}
+function deleteCategory(i){categories.splice(i,1);renderCategories();}
+function editCategory(i){const n=prompt('Novo nome:',categories[i].name);if(n)categories[i].name=n;renderCategories();}
+function toggleSubcategory(ci,si){categories[ci].subcategories[si].collapsed=!categories[ci].subcategories[si].collapsed;renderCategories();}
+function deleteSubcategory(ci,si){categories[ci].subcategories.splice(si,1);renderCategories();}
+
+function editSubcategory(ci,si){
+  const sub=categories[ci].subcategories[si];
+  const nn=prompt('Novo nome:',sub.name);if(nn)sub.name=nn;
+  let action=true;
+  while(action){
+    let list='Subcategoria: '+sub.name+'\n\n';
+    for(let i=0;i<sub.options.length;i++) list+=i+' - '+sub.options[i].name+' ('+sub.options[i].weight+')\n';
+    list+='\nDigite:\nedit número\ndel número\nadd\nsair';
+    const choice=prompt(list);
+    if(!choice||choice==='sair'){action=false;}
+    else if(choice.startsWith('edit')){
+      const num=parseInt(choice.split(' ')[1]);
+      if(sub.options[num]){
+        const on=prompt('Novo nome:',sub.options[num].name);
+        const ow=prompt('Nova %:',sub.options[num].weight);
+        if(on)sub.options[num].name=on;
+        if(ow)sub.options[num].weight=parseFloat(ow);
+        sortOptions(sub.options);
+      }
+    }else if(choice.startsWith('del')){
+      const num=parseInt(choice.split(' ')[1]);
+      if(sub.options[num])sub.options.splice(num,1);
+    }else if(choice==='add'){
+      const on=prompt('Nome:');const ow=prompt('Peso:');
+      if(on&&ow){sub.options.push({name:on,weight:parseFloat(ow)});sortOptions(sub.options);}
+    }
+  }
+  renderCategories();
+}
+
+function renderCategories(){
+  const div=document.getElementById('categories');
+  div.innerHTML='';
+  for(let i=0;i<categories.length;i++){
+    const cat=categories[i];
+    const box=document.createElement('div');box.className='category';
+    const title=document.createElement('h3');title.innerText=cat.name;title.style.marginBottom='8px';
+    const minBtn=document.createElement('button');minBtn.innerText=cat.collapsed?'Expandir':'Minimizar';
+    minBtn.onclick=()=>toggleCategory(i);
+    const editBtn=document.createElement('button');editBtn.innerText='Editar';editBtn.onclick=()=>editCategory(i);
+    const delBtn=document.createElement('button');delBtn.innerText='Deletar';delBtn.onclick=()=>deleteCategory(i);
+    box.appendChild(title);box.appendChild(minBtn);box.appendChild(editBtn);box.appendChild(delBtn);
+    if(!cat.collapsed){
+      for(let j=0;j<cat.subcategories.length;j++){
+        const sub=cat.subcategories[j];
+        const subDiv=document.createElement('div');subDiv.className='subcategory';
+        const subHeader=document.createElement('div');subHeader.style.display='flex';subHeader.style.alignItems='center';subHeader.style.gap='4px';subHeader.style.marginBottom='8px';
+        const subTitle=document.createElement('h4');subTitle.innerText=sub.name;subTitle.style.margin='0';subTitle.style.flex='1';
+        const subMinBtn=document.createElement('button');subMinBtn.innerText=sub.collapsed?'↓':'↑';
+        subMinBtn.style.padding='3px 8px';subMinBtn.style.fontSize='.75rem';
+        subMinBtn.onclick=()=>toggleSubcategory(i,j);
+        const subEdit=document.createElement('button');subEdit.innerText='Editar';subEdit.onclick=()=>editSubcategory(i,j);
+        const subDel=document.createElement('button');subDel.innerText='Deletar';subDel.onclick=()=>deleteSubcategory(i,j);
+        subHeader.appendChild(subTitle);subHeader.appendChild(subMinBtn);subHeader.appendChild(subEdit);subHeader.appendChild(subDel);
+        subDiv.appendChild(subHeader);
+        if(!sub.collapsed){
+          const ul=document.createElement('ul');ul.style.paddingLeft='0';
+          const normalized=normalize(sub.options);
+          for(let k=0;k<normalized.length;k++){
+            const li=document.createElement('li');
+            li.innerText=normalized[k].name+' ('+normalized[k].percent.toFixed(2)+'%)';
+            applyRarityToEl(li,normalized[k].percent);
+            ul.appendChild(li);
+          }
+          subDiv.appendChild(ul);
+        }
+        box.appendChild(subDiv);
+      }
+    }
+    div.appendChild(box);
+  }
+}
+
+/* ============================================================
+   ADD MANUAL SKILL (replace if exists)
+============================================================ */
+function addManualSkill(char){
+  let catList='Escolha categoria:\n';
+  for(let i=0;i<categories.length;i++) catList+=i+' - '+categories[i].name+'\n';
+  const ci=parseInt(prompt(catList));
+  if(isNaN(ci)||!categories[ci])return;
+  const cat=categories[ci];
+  let subList='Escolha subcategoria:\n';
+  for(let i=0;i<cat.subcategories.length;i++) subList+=i+' - '+cat.subcategories[i].name+'\n';
+  const si=parseInt(prompt(subList));
+  if(isNaN(si)||!cat.subcategories[si])return;
+  const sub=cat.subcategories[si];
+  let optList='Escolha habilidade:\n';
+  const normalized=normalize(sub.options);
+  for(let i=0;i<normalized.length;i++) optList+=i+' - '+normalized[i].name+' ('+normalized[i].percent.toFixed(2)+'%)\n';
+  const oi=parseInt(prompt(optList));
+  if(isNaN(oi)||!normalized[oi])return;
+  const result=normalized[oi];
+  // Procura p existente com esse sub
+  const ps=char.getElementsByTagName('p');
+  for(let i=0;i<ps.length;i++){
+    if(ps[i].dataset.sub===sub.name){
+      ps[i].innerText=sub.name+': '+result.name+' ('+result.percent.toFixed(2)+'%)';
+      applyRarityToEl(ps[i],result.percent);
+      return;
+    }
+  }
+  // Se não existir, cria novo
+  const p=document.createElement('p');p.className='skill-item';p.dataset.sub=sub.name;
+  p.innerText=sub.name+': '+result.name+' ('+result.percent.toFixed(2)+'%)';
+  applyRarityToEl(p,result.percent);
+  (function(pEl,subRef){
+    pEl.onclick=function(){
+      if(char.classList.contains('pinned'))return;
+      openRoulette(subRef.name,subRef.options,function(r){
+        pEl.innerText=subRef.name+': '+r.name+' ('+r.percent.toFixed(2)+'%)';
+        applyRarityToEl(pEl,r.percent);
+      });
+    };
+  })(p,sub);
+  char.appendChild(p);
+}
+
+/* ============================================================
+   COPY
+============================================================ */
+function copyCharacter(char){
+  let text='';
+  const name=char.getElementsByClassName('charHeader')[0].children[0].innerText;
+  text+=name+'\n';
+  const ps=char.getElementsByTagName('p');
+  for(let i=0;i<ps.length;i++){
+    const line=ps[i].innerText.replace(/\s*\(.*?\)/,'').replace('◎','').trim();
+    text+=line+'\n';
+  }
+  navigator.clipboard.writeText(text);
+}
+
+/* ============================================================
+   CHARACTER
+============================================================ */
+function createCharacter(){
+  const char=document.createElement('div');char.className='character';
+  const header=document.createElement('div');header.className='charHeader';
+  const nameSpan=document.createElement('span');nameSpan.innerText='Personagem '+charCount;
+
+  const addBtn=document.createElement('span');addBtn.innerText='➕';addBtn.title='Adicionar habilidade manual';
+  addBtn.onclick=()=>addManualSkill(char);
+
+  const pinBtn=document.createElement('span');pinBtn.innerText='📌';pinBtn.title='Fixar';
+  pinBtn.onclick=()=>char.classList.toggle('pinned');
+
+  const delBtn=document.createElement('span');delBtn.innerText='🗑';delBtn.title='Deletar';
+  delBtn.onclick=()=>{if(!char.classList.contains('pinned'))char.remove();};
+
+  const editBtn=document.createElement('span');editBtn.innerText='🖊';editBtn.title='Renomear';
+  editBtn.onclick=()=>{const n=prompt('Novo nome:');if(n)nameSpan.innerText=n;};
+
+  const copyBtn=document.createElement('span');copyBtn.innerText='📋';copyBtn.title='Copiar';
+  copyBtn.onclick=()=>copyCharacter(char);
+
+  header.appendChild(nameSpan);
+  header.appendChild(addBtn);
+  header.appendChild(pinBtn);
+  header.appendChild(delBtn);
+  header.appendChild(editBtn);
+  header.appendChild(copyBtn);
+  char.appendChild(header);
+
+  for(let i=0;i<categories.length;i++){
+    const catTitle=document.createElement('h4');
+    catTitle.innerText='— '+categories[i].name+' —';
+    catTitle.style.marginTop='10px';
+    char.appendChild(catTitle);
+    for(let j=0;j<categories[i].subcategories.length;j++){
+      const sub=categories[i].subcategories[j];
+      const p=document.createElement('p');p.className='skill-item';p.dataset.sub=sub.name;
+      // Start empty — player rolls via roulette
+      p.innerText=sub.name+': —';
+      p.style.background='linear-gradient(135deg,#111 0%,#1a1a1a 100%)';
+      p.style.border='1px solid #2a2a2a';
+      p.style.color='#444';
+      p.style.animation='none';
+      (function(pEl,subRef){
+        pEl.onclick=function(){
+          if(char.classList.contains('pinned'))return;
+          openRoulette(subRef.name,subRef.options,function(r){
+            pEl.innerText=subRef.name+': '+r.name+' ('+r.percent.toFixed(2)+'%)';
+            applyRarityToEl(pEl,r.percent);
+          });
+        };
+      })(p,sub);
+      char.appendChild(p);
+    }
+  }
+  document.getElementById('characters').appendChild(char);
+  charCount++;
+}
+
+function generateAll(){
+  const amount=parseInt(document.getElementById('amount').value);
+  const chars=document.getElementsByClassName('character');
+  for(let i=chars.length-1;i>=0;i--) if(!chars[i].classList.contains('pinned'))chars[i].remove();
+  for(let i=0;i<amount;i++)createCharacter();
+}
+function generateOne(){createCharacter();}
+</script>
+</body>
+</html>
